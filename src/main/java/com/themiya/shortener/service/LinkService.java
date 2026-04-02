@@ -49,20 +49,17 @@ public class LinkService {
     }
 
     @Transactional(readOnly = true)
-    public Link resolveBySlug(String slug) {
+    public String resolveOriginalUrlBySlug(String slug) {
         String cached = redisTemplate.opsForValue().get(cacheKey(slug));
         if (cached != null && !cached.isBlank()) {
-            Link link = new Link();
-            link.setSlug(slug);
-            link.setOriginalUrl(cached);
-            return link;
+            return cached;
         }
 
         Link link = linkRepository.findBySlugAndActiveTrue(slug)
                 .orElseThrow(() -> new NotFoundException("Short URL not found"));
 
         putInCache(slug, link.getOriginalUrl());
-        return link;
+        return link.getOriginalUrl();
     }
 
     @Transactional(readOnly = true)
@@ -74,6 +71,11 @@ public class LinkService {
     public Link getLinkOrThrow(Long id) {
         return linkRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Link not found"));
+    }
+
+    @Transactional(readOnly = true)
+    public LinkResponse getLinkResponseOrThrow(Long id) {
+        return toResponse(getLinkOrThrow(id));
     }
 
     private void putInCache(String slug, String originalUrl) {

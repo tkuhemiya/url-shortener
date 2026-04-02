@@ -4,6 +4,7 @@ import com.themiya.shortener.entity.ClickEvent;
 import com.themiya.shortener.entity.Link;
 import com.themiya.shortener.repository.ClickEventRepository;
 import com.themiya.shortener.repository.LinkRepository;
+import com.themiya.shortener.util.RequestUtils;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
@@ -23,8 +24,8 @@ public class ClickTrackingService {
 
     @Async
     @Transactional
-    public void logClickAsync(Long linkId, HttpServletRequest request) {
-        Link link = linkRepository.findById(linkId).orElse(null);
+    public void logClickAsync(String slug, HttpServletRequest request) {
+        Link link = linkRepository.findBySlugAndActiveTrue(slug).orElse(null);
         if (link == null) {
             return;
         }
@@ -32,7 +33,7 @@ public class ClickTrackingService {
         ClickEvent event = new ClickEvent();
         event.setLink(link);
         event.setClickedAt(OffsetDateTime.now());
-        event.setIpAddress(extractIp(request));
+        event.setIpAddress(RequestUtils.extractClientIp(request));
         event.setUserAgent(request.getHeader("User-Agent"));
         event.setReferer(request.getHeader("Referer"));
         event.setCountry("unknown");
@@ -44,14 +45,6 @@ public class ClickTrackingService {
 
         link.setClickCount(link.getClickCount() + 1);
         linkRepository.save(link);
-    }
-
-    private String extractIp(HttpServletRequest request) {
-        String xff = request.getHeader("X-Forwarded-For");
-        if (xff != null && !xff.isBlank()) {
-            return xff.split(",")[0].trim();
-        }
-        return request.getRemoteAddr();
     }
 
     private String extractDeviceType(String ua) {
