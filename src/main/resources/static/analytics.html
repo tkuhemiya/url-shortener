@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Analytics</title>
+  <link rel="stylesheet" href="/app.css" />
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</head>
+<body>
+<div class="container" x-data="analyticsPage()" x-init="init()">
+  <div class="header">
+    <h1>Analytics</h1>
+    <a class="btn secondary" href="/">Back to URLs</a>
+  </div>
+
+  <div class="card">
+    <h3 class="section-title">Scope</h3>
+    <div class="form-row">
+      <button class="btn secondary" @click="clearSelection()">All URLs</button>
+      <div class="search-wrap" style="flex:1">
+        <input class="input" type="text" placeholder="Search URL and select one..." x-model="search" @focus="showResults = true" @input="showResults = true" />
+        <div class="search-results" x-show="showResults && filteredLinks.length > 0" @click.outside="showResults = false">
+          <template x-for="link in filteredLinks" :key="link.id">
+            <div class="search-item" @click="selectLink(link)">
+              <div x-text="link.shortUrl"></div>
+              <div class="small" x-text="link.originalUrl"></div>
+            </div>
+          </template>
+        </div>
+      </div>
+    </div>
+    <div class="small" style="margin-top:8px;" x-show="selectedLink">
+      Viewing selected URL: <strong x-text="selectedLink.shortUrl"></strong>
+    </div>
+    <div class="small" style="margin-top:8px;" x-show="!selectedLink">
+      Viewing analytics across all URLs.
+    </div>
+  </div>
+
+  <div class="analytics-grid">
+    <div class="card">
+      <div class="small">Total Clicks</div>
+      <div class="value" x-text="analytics.totalClicks ?? 0"></div>
+    </div>
+    <div class="card">
+      <div class="small">Unique Countries</div>
+      <div class="value" x-text="analytics.byCountry?.length ?? 0"></div>
+    </div>
+    <div class="card">
+      <div class="small">Referrers</div>
+      <div class="value" x-text="analytics.byReferer?.length ?? 0"></div>
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <h3 class="section-title">Clicks by day</h3>
+      <ol class="bucket-list">
+        <template x-for="b in analytics.byDay || []" :key="b.label">
+          <li><span x-text="b.label"></span>: <strong x-text="b.total"></strong></li>
+        </template>
+      </ol>
+    </div>
+
+    <div class="card">
+      <h3 class="section-title">By country</h3>
+      <ol class="bucket-list">
+        <template x-for="b in analytics.byCountry || []" :key="b.label">
+          <li><span x-text="b.label"></span>: <strong x-text="b.total"></strong></li>
+        </template>
+      </ol>
+    </div>
+
+    <div class="card">
+      <h3 class="section-title">By device</h3>
+      <ol class="bucket-list">
+        <template x-for="b in analytics.byDevice || []" :key="b.label">
+          <li><span x-text="b.label"></span>: <strong x-text="b.total"></strong></li>
+        </template>
+      </ol>
+    </div>
+
+    <div class="card">
+      <h3 class="section-title">Top referrers</h3>
+      <ol class="bucket-list">
+        <template x-for="b in analytics.byReferer || []" :key="b.label">
+          <li><span x-text="b.label"></span>: <strong x-text="b.total"></strong></li>
+        </template>
+      </ol>
+    </div>
+  </div>
+</div>
+
+<script>
+  function analyticsPage() {
+    return {
+      links: [],
+      analytics: {},
+      selectedLink: null,
+      search: '',
+      showResults: false,
+
+      get filteredLinks() {
+        const q = this.search.toLowerCase().trim();
+        if (!q) return this.links.slice(0, 8);
+        return this.links
+          .filter(l => l.shortUrl.toLowerCase().includes(q) || l.originalUrl.toLowerCase().includes(q))
+          .slice(0, 8);
+      },
+
+      async init() {
+        const params = new URLSearchParams(window.location.search);
+        const preselectedId = params.get('linkId');
+
+        const linksRes = await fetch('/api/links');
+        this.links = await linksRes.json();
+
+        if (preselectedId) {
+          const found = this.links.find(l => String(l.id) === String(preselectedId));
+          if (found) {
+            this.selectLink(found, false);
+            return;
+          }
+        }
+
+        await this.fetchAnalytics();
+      },
+
+      async fetchAnalytics() {
+        let url = '/api/analytics';
+        if (this.selectedLink) {
+          url += `?linkId=${this.selectedLink.id}`;
+        }
+        const res = await fetch(url);
+        this.analytics = await res.json();
+      },
+
+      async selectLink(link, closeResults = true) {
+        this.selectedLink = link;
+        this.search = link.shortUrl;
+        if (closeResults) this.showResults = false;
+        await this.fetchAnalytics();
+      },
+
+      async clearSelection() {
+        this.selectedLink = null;
+        this.search = '';
+        await this.fetchAnalytics();
+      }
+    }
+  }
+</script>
+</body>
+</html>

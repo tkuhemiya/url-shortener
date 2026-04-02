@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>URL Shortener</title>
+  <link rel="stylesheet" href="/app.css" />
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</head>
+<body>
+<div class="container" x-data="urlsPage()" x-init="init()">
+  <div class="header">
+    <h1>Your URLs</h1>
+    <a class="btn secondary" href="/analytics.html">Open Analytics</a>
+  </div>
+
+  <div class="card">
+    <h3 class="section-title">Create short URL</h3>
+    <form class="form-row" @submit.prevent="createUrl()">
+      <input class="input" type="url" placeholder="https://example.com/some/long/path" x-model="formUrl" required />
+      <button class="btn" type="submit" :disabled="loadingCreate" x-text="loadingCreate ? 'Creating...' : 'Create'"></button>
+    </form>
+    <div class="error" x-text="error" x-show="error"></div>
+    <div class="success" x-text="success" x-show="success"></div>
+  </div>
+
+  <div class="grid">
+    <template x-for="link in links" :key="link.id">
+      <div class="card link-card" @click="openAnalytics(link)">
+        <div class="short-row">
+          <div class="short-url" x-text="link.shortUrl"></div>
+          <button class="btn secondary" @click.stop="copy(link.shortUrl)">Copy</button>
+        </div>
+        <div class="original-url" x-text="link.originalUrl"></div>
+        <div class="meta">
+          Clicks: <span x-text="link.clickCount"></span>
+        </div>
+      </div>
+    </template>
+  </div>
+</div>
+
+<script>
+  function urlsPage() {
+    return {
+      links: [],
+      formUrl: '',
+      loadingCreate: false,
+      error: '',
+      success: '',
+
+      async init() {
+        await this.fetchLinks();
+      },
+
+      async fetchLinks() {
+        const res = await fetch('/api/links');
+        this.links = await res.json();
+      },
+
+      async createUrl() {
+        this.error = '';
+        this.success = '';
+        this.loadingCreate = true;
+        try {
+          const res = await fetch('/api/links', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url: this.formUrl })
+          });
+
+          if (!res.ok) {
+            const data = await res.json();
+            throw new Error(data.message || 'Failed to create short URL');
+          }
+
+          const created = await res.json();
+          this.links.unshift(created);
+          this.success = 'Short URL created.';
+          this.formUrl = '';
+        } catch (e) {
+          this.error = e.message;
+        } finally {
+          this.loadingCreate = false;
+        }
+      },
+
+      async copy(value) {
+        await navigator.clipboard.writeText(value);
+        this.success = 'Copied to clipboard.';
+        setTimeout(() => this.success = '', 1200);
+      },
+
+      openAnalytics(link) {
+        window.location.href = `/analytics.html?linkId=${link.id}`;
+      }
+    }
+  }
+</script>
+</body>
+</html>
