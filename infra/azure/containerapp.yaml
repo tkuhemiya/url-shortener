@@ -1,0 +1,38 @@
+name: url-shortener
+location: eastus
+type: Microsoft.App/containerApps
+properties:
+  managedEnvironmentId: /subscriptions/<SUBSCRIPTION_ID>/resourceGroups/<RESOURCE_GROUP>/providers/Microsoft.App/managedEnvironments/<CONTAINER_APP_ENV>
+  configuration:
+    ingress:
+      external: true
+      targetPort: 8080
+      transport: auto
+    registries: []
+  template:
+    containers:
+      - name: url-shortener
+        image: <ACR_LOGIN_SERVER>/url-shortener:latest
+        env:
+          - name: DB_URL
+            value: jdbc:postgresql://<POSTGRES_HOST>:5432/url_shortener
+          - name: DB_USER
+            value: <POSTGRES_USER>
+          - name: DB_PASSWORD
+            secretRef: db-password
+          - name: REDIS_HOST
+            value: <REDIS_HOST>
+          - name: REDIS_PORT
+            value: "6379"
+          - name: SHORT_BASE_URL
+            value: https://<YOUR_DOMAIN>
+          - name: RATE_LIMIT_CREATE_PER_MINUTE
+            value: "10"
+          - name: RATE_LIMIT_REDIRECT_PER_MINUTE
+            value: "600"
+    scale:
+      minReplicas: 1
+      maxReplicas: 5
+  secrets:
+    - name: db-password
+      value: <POSTGRES_PASSWORD>
