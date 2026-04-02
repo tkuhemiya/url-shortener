@@ -2,6 +2,8 @@ package com.themiya.shortener.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -15,6 +17,8 @@ import java.time.Duration;
 
 @Service
 public class GeoIpService {
+    private static final Logger log = LoggerFactory.getLogger(GeoIpService.class);
+
     private final HttpClient httpClient;
     private final ObjectMapper objectMapper;
     private final String lookupUrlTemplate;
@@ -57,22 +61,41 @@ public class GeoIpService {
                 return countryCode.asText();
             }
             return "unknown";
-        } catch (Exception ignored) {
+        } catch (Exception ex) {
+            log.warn("Geo IP lookup failed for ip={}", ipAddress, ex);
             return "unknown";
         }
     }
 
     private boolean isLocalOrPrivate(String ipAddress) {
-        return ipAddress.startsWith("127.")
-                || ipAddress.equals("::1")
-                || ipAddress.startsWith("10.")
-                || ipAddress.startsWith("192.168.")
-                || ipAddress.startsWith("172.16.")
-                || ipAddress.startsWith("172.17.")
-                || ipAddress.startsWith("172.18.")
-                || ipAddress.startsWith("172.19.")
-                || ipAddress.startsWith("172.2")
-                || ipAddress.startsWith("172.30.")
-                || ipAddress.startsWith("172.31.");
+        if (ipAddress.equals("::1") || ipAddress.startsWith("fe80:") || ipAddress.startsWith("fc") || ipAddress.startsWith("fd")) {
+            return true;
+        }
+
+        String[] octets = ipAddress.split("\\.");
+        if (octets.length != 4) {
+            return false;
+        }
+
+        try {
+            int o1 = Integer.parseInt(octets[0]);
+            int o2 = Integer.parseInt(octets[1]);
+            int o3 = Integer.parseInt(octets[2]);
+            int o4 = Integer.parseInt(octets[3]);
+            if (!inOctetRange(o1) || !inOctetRange(o2) || !inOctetRange(o3) || !inOctetRange(o4)) {
+                return false;
+            }
+
+            return o1 == 10
+                    || (o1 == 127)
+                    || (o1 == 192 && o2 == 168)
+                    || (o1 == 172 && o2 >= 16 && o2 <= 31);
+        } catch (NumberFormatException ex) {
+            return false;
+        }
+    }
+
+    private boolean inOctetRange(int value) {
+        return value >= 0 && value <= 255;
     }
 }

@@ -4,9 +4,11 @@ import com.themiya.shortener.entity.UserAccount;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseCookie;
 import org.springframework.stereotype.Service;
 
+import java.time.Duration;
 import java.util.Arrays;
 import java.util.Optional;
 import java.util.UUID;
@@ -15,9 +17,12 @@ import java.util.UUID;
 public class ActorContextService {
     public static final String ANON_COOKIE = "ANON_ID";
     private final AuthService authService;
+    private final long authSessionTtlDays;
 
-    public ActorContextService(AuthService authService) {
+    public ActorContextService(AuthService authService,
+                               @Value("${app.auth.session-ttl-days:30}") long authSessionTtlDays) {
         this.authService = authService;
+        this.authSessionTtlDays = authSessionTtlDays;
     }
 
     public ActorContext resolve(HttpServletRequest request, HttpServletResponse response) {
@@ -37,7 +42,9 @@ public class ActorContextService {
     }
 
     public void setAuthCookie(HttpServletResponse response, String token) {
-        setCookie(response, AuthService.AUTH_COOKIE, token, 30 * 24 * 60 * 60);
+        long ttlSeconds = Duration.ofDays(authSessionTtlDays).getSeconds();
+        int maxAgeSeconds = (int) Math.min(ttlSeconds, Integer.MAX_VALUE);
+        setCookie(response, AuthService.AUTH_COOKIE, token, maxAgeSeconds);
     }
 
     public void clearAuthCookie(HttpServletResponse response) {

@@ -4,11 +4,13 @@ import com.themiya.shortener.dto.AuthRequest;
 import com.themiya.shortener.dto.AuthResponse;
 import com.themiya.shortener.entity.UserAccount;
 import com.themiya.shortener.exception.BadRequestException;
-import com.themiya.shortener.exception.NotFoundException;
+import com.themiya.shortener.exception.UnauthorizedException;
 import com.themiya.shortener.repository.UserAccountRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,6 +19,7 @@ import java.util.UUID;
 
 @Service
 public class AuthService {
+    private static final Logger log = LoggerFactory.getLogger(AuthService.class);
     public static final String AUTH_COOKIE = "AUTH_TOKEN";
     private final UserAccountRepository userAccountRepository;
     private final PasswordEncoder passwordEncoder;
@@ -59,10 +62,10 @@ public class AuthService {
     public AuthResponse login(AuthRequest request) {
         String email = normalizeEmail(request.getEmail());
         UserAccount user = userAccountRepository.findByEmail(email)
-                .orElseThrow(() -> new NotFoundException("Invalid email or password"));
+                .orElseThrow(() -> new UnauthorizedException("Invalid email or password"));
 
         if (!passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {
-            throw new NotFoundException("Invalid email or password");
+            throw new UnauthorizedException("Invalid email or password");
         }
 
         return AuthResponse.of(user.getId(), user.getEmail());
@@ -95,7 +98,8 @@ public class AuthService {
         try {
             Long userId = Long.parseLong(userIdValue);
             return userAccountRepository.findById(userId).orElse(null);
-        } catch (NumberFormatException ignored) {
+        } catch (NumberFormatException ex) {
+            log.warn("Invalid user id stored in session for token: {}", token);
             return null;
         }
     }

@@ -37,7 +37,9 @@ public class RedirectController {
         }
 
         String destination = linkService.resolveOriginalUrlBySlug(slug);
-        clickTrackingService.logClickAsync(slug, request);
+        String userAgent = request.getHeader("User-Agent");
+        String referer = request.getHeader("Referer");
+        clickTrackingService.logClickAsync(slug, ip, userAgent, referer);
 
         HttpHeaders headers = new HttpHeaders();
         headers.setLocation(URI.create(destination));

@@ -1,5 +1,7 @@
 package com.themiya.shortener.service;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
@@ -11,6 +13,8 @@ import java.util.UUID;
 
 @Service
 public class RateLimitService {
+    private static final Logger log = LoggerFactory.getLogger(RateLimitService.class);
+
     private static final DefaultRedisScript<Long> SLIDING_WINDOW_SCRIPT = new DefaultRedisScript<>(
             "redis.call('ZREMRANGEBYSCORE', KEYS[1], '-inf', ARGV[1])\n" +
                     "redis.call('ZADD', KEYS[1], ARGV[2], ARGV[3])\n" +
@@ -57,7 +61,8 @@ public class RateLimitService {
                     String.valueOf(limit)
             );
             return allowed != null && allowed == 1L;
-        } catch (Exception ignored) {
+        } catch (Exception ex) {
+            log.warn("Rate limiter failed open for endpoint={} identifier={}", endpoint, identifier, ex);
             return true;
         }
     }
