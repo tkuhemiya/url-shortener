@@ -30,6 +30,9 @@ services:
       REDIS_HOST: redis
       REDIS_PORT: 6379
       SHORT_BASE_URL: http://localhost:8080
+      ANON_LINK_MAX: 5
+      ACCOUNT_LINK_MAX: 1000
+      AUTH_SESSION_TTL_DAYS: 30
     ports:
       - "8080:8080"
 

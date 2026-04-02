@@ -30,6 +30,12 @@ properties:
             value: "10"
           - name: RATE_LIMIT_REDIRECT_PER_MINUTE
             value: "600"
+          - name: ANON_LINK_MAX
+            value: "5"
+          - name: ACCOUNT_LINK_MAX
+            value: "1000"
+          - name: AUTH_SESSION_TTL_DAYS
+            value: "30"
     scale:
       minReplicas: 1
       maxReplicas: 5
