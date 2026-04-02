@@ -14,6 +14,27 @@
     <a class="btn secondary" href="/analytics.html">Open Analytics</a>
   </div>
 
+  <div class="card" style="margin-bottom: 14px;">
+    <h3 class="section-title">Account</h3>
+    <div x-show="me.authenticated" class="small">
+      Signed in as <strong x-text="me.email"></strong>
+      <button class="btn secondary" style="margin-left: 8px;" @click="logout()">Log out</button>
+    </div>
+
+    <div x-show="!me.authenticated">
+      <div class="small" style="margin-bottom: 8px;">Guest users can create up to 5 links. Sign up to create more.</div>
+      <div class="form-row" style="margin-bottom: 8px;">
+        <input class="input" type="email" placeholder="email" x-model="auth.email" />
+        <input class="input" type="password" placeholder="password (min 8)" x-model="auth.password" />
+      </div>
+      <div class="form-row">
+        <button class="btn" @click="signup()" :disabled="authLoading">Sign up</button>
+        <button class="btn secondary" @click="login()" :disabled="authLoading">Log in</button>
+      </div>
+      <div class="error" x-show="authError" x-text="authError"></div>
+    </div>
+  </div>
+
   <div class="card">
     <h3 class="section-title">Create short URL</h3>
     <form class="form-row" @submit.prevent="createUrl()">
@@ -63,9 +84,19 @@
       copiedLinkId: null,
       error: '',
       success: '',
+      authLoading: false,
+      authError: '',
+      auth: { email: '', password: '' },
+      me: { authenticated: false, email: null },
 
       async init() {
+        await this.fetchMe();
         await this.fetchLinks();
+      },
+
+      async fetchMe() {
+        const res = await fetch('/api/auth/me');
+        this.me = await res.json();
       },
 
       async fetchLinks() {
@@ -76,6 +107,43 @@
         } finally {
           this.loadingLinks = false;
         }
+      },
+
+      async signup() {
+        await this.authCall('/api/auth/signup');
+      },
+
+      async login() {
+        await this.authCall('/api/auth/login');
+      },
+
+      async authCall(url) {
+        this.authError = '';
+        this.authLoading = true;
+        try {
+          const res = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(this.auth)
+          });
+          if (!res.ok) {
+            const data = await res.json();
+            throw new Error(data.message || 'Authentication failed');
+          }
+          this.auth.password = '';
+          await this.fetchMe();
+          await this.fetchLinks();
+        } catch (e) {
+          this.authError = e.message;
+        } finally {
+          this.authLoading = false;
+        }
+      },
+
+      async logout() {
+        await fetch('/api/auth/logout', { method: 'POST' });
+        this.me = { authenticated: false, email: null };
+        await this.fetchLinks();
       },
 
       async createUrl() {

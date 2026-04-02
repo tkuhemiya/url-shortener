@@ -23,6 +23,11 @@ management:
 app:
   short-base-url: ${SHORT_BASE_URL:http://localhost:8080}
   cache-ttl-seconds: ${CACHE_TTL_SECONDS:86400}
+  link-limits:
+    anonymous-max: ${ANON_LINK_MAX:5}
+    account-max: ${ACCOUNT_LINK_MAX:1000}
+  auth:
+    session-ttl-days: ${AUTH_SESSION_TTL_DAYS:30}
   rate-limit:
     create-per-minute: ${RATE_LIMIT_CREATE_PER_MINUTE:10}
     redirect-per-minute: ${RATE_LIMIT_REDIRECT_PER_MINUTE:600}

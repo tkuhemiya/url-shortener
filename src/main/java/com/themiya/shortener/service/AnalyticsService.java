@@ -10,35 +10,34 @@ import java.util.List;
 @Service
 public class AnalyticsService {
     private final ClickEventRepository clickEventRepository;
+    private final LinkService linkService;
 
-    public AnalyticsService(ClickEventRepository clickEventRepository) {
+    public AnalyticsService(ClickEventRepository clickEventRepository, LinkService linkService) {
         this.clickEventRepository = clickEventRepository;
+        this.linkService = linkService;
     }
 
     @Transactional(readOnly = true)
-    public AnalyticsResponse getAnalytics(Long linkId) {
-        if (linkId == null) {
-            return getAnalytics();
+    public AnalyticsResponse getAnalytics(ActorContext actorContext, Long linkId) {
+        if (linkId != null) {
+            long total = clickEventRepository.countByLinkId(linkId);
+            List<AnalyticsResponse.Bucket> byDay = toBuckets(clickEventRepository.countByDay(linkId));
+            List<AnalyticsResponse.Bucket> byCountry = toBuckets(clickEventRepository.countByCountry(linkId));
+            List<AnalyticsResponse.Bucket> byDevice = toBuckets(clickEventRepository.countByDeviceType(linkId));
+            List<AnalyticsResponse.Bucket> byReferer = toBuckets(clickEventRepository.countByReferer(linkId));
+            return AnalyticsResponse.of(total, byDay, byCountry, byDevice, byReferer);
         }
 
-        long total = clickEventRepository.countByLinkId(linkId);
+        List<Long> ownedLinkIds = linkService.getOwnedLinkIds(actorContext);
+        if (ownedLinkIds.isEmpty()) {
+            return AnalyticsResponse.of(0, List.of(), List.of(), List.of(), List.of());
+        }
 
-        List<AnalyticsResponse.Bucket> byDay = toBuckets(clickEventRepository.countByDay(linkId));
-        List<AnalyticsResponse.Bucket> byCountry = toBuckets(clickEventRepository.countByCountry(linkId));
-        List<AnalyticsResponse.Bucket> byDevice = toBuckets(clickEventRepository.countByDeviceType(linkId));
-        List<AnalyticsResponse.Bucket> byReferer = toBuckets(clickEventRepository.countByReferer(linkId));
-
-        return AnalyticsResponse.of(total, byDay, byCountry, byDevice, byReferer);
-    }
-
-    @Transactional(readOnly = true)
-    public AnalyticsResponse getAnalytics() {
-        long total = clickEventRepository.count();
-
-        List<AnalyticsResponse.Bucket> byDay = toBuckets(clickEventRepository.countByDayAll());
-        List<AnalyticsResponse.Bucket> byCountry = toBuckets(clickEventRepository.countByCountryAll());
-        List<AnalyticsResponse.Bucket> byDevice = toBuckets(clickEventRepository.countByDeviceTypeAll());
-        List<AnalyticsResponse.Bucket> byReferer = toBuckets(clickEventRepository.countByRefererAll());
+        long total = clickEventRepository.countByLinkIdIn(ownedLinkIds);
+        List<AnalyticsResponse.Bucket> byDay = toBuckets(clickEventRepository.countByDayIn(ownedLinkIds));
+        List<AnalyticsResponse.Bucket> byCountry = toBuckets(clickEventRepository.countByCountryIn(ownedLinkIds));
+        List<AnalyticsResponse.Bucket> byDevice = toBuckets(clickEventRepository.countByDeviceTypeIn(ownedLinkIds));
+        List<AnalyticsResponse.Bucket> byReferer = toBuckets(clickEventRepository.countByRefererIn(ownedLinkIds));
 
         return AnalyticsResponse.of(total, byDay, byCountry, byDevice, byReferer);
     }

@@ -32,6 +32,13 @@ public class Link {
     @Column(name = "click_count", nullable = false)
     private long clickCount = 0;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id")
+    private UserAccount user;
+
+    @Column(name = "owner_token", length = 64)
+    private String ownerToken;
+
     @PrePersist
     void prePersist() {
         OffsetDateTime now = OffsetDateTime.now();
@@ -86,5 +93,21 @@ public class Link {
 
     public void setClickCount(long clickCount) {
         this.clickCount = clickCount;
+    }
+
+    public UserAccount getUser() {
+        return user;
+    }
+
+    public void setUser(UserAccount user) {
+        this.user = user;
+    }
+
+    public String getOwnerToken() {
+        return ownerToken;
+    }
+
+    public void setOwnerToken(String ownerToken) {
+        this.ownerToken = ownerToken;
     }
 }
