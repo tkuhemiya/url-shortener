@@ -1,0 +1,26 @@
+spring:
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/url_shortener}
+    username: ${DB_USER:postgres}
+    password: ${DB_PASSWORD:postgres}
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+app:
+  short-base-url: ${SHORT_BASE_URL:http://localhost:8080}
+  cache-ttl-seconds: ${CACHE_TTL_SECONDS:86400}
+  rate-limit:
+    create-per-minute: ${RATE_LIMIT_CREATE_PER_MINUTE:10}
+    redirect-per-minute: ${RATE_LIMIT_REDIRECT_PER_MINUTE:600}
