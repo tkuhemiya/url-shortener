@@ -38,56 +38,86 @@
     </div>
   </div>
 
-  <div class="analytics-grid">
-    <div class="card">
-      <div class="small">Total Clicks</div>
-      <div class="value" x-text="analytics.totalClicks ?? 0"></div>
-    </div>
-    <div class="card">
-      <div class="small">Unique Countries</div>
-      <div class="value" x-text="analytics.byCountry?.length ?? 0"></div>
-    </div>
-    <div class="card">
-      <div class="small">Referrers</div>
-      <div class="value" x-text="analytics.byReferer?.length ?? 0"></div>
-    </div>
+  <div class="loading-wrap" x-show="loadingAnalytics || loadingLinks">
+    <div class="spinner" aria-label="Loading analytics"></div>
   </div>
 
-  <div class="grid">
-    <div class="card">
-      <h3 class="section-title">Clicks by day</h3>
-      <ol class="bucket-list">
-        <template x-for="b in analytics.byDay || []" :key="b.label">
-          <li><span x-text="b.label"></span>: <strong x-text="b.total"></strong></li>
-        </template>
-      </ol>
+  <div class="empty-state" x-show="!loadingLinks && links.length === 0">
+    <div class="card">No URLs found yet. Create one first to see analytics.</div>
+  </div>
+
+  <div x-show="!loadingAnalytics && !loadingLinks && links.length > 0">
+    <div class="analytics-grid">
+      <div class="card">
+        <div class="small">Total Clicks</div>
+        <div class="value" x-text="analytics.totalClicks ?? 0"></div>
+      </div>
+      <div class="card">
+        <div class="small">Unique Countries</div>
+        <div class="value" x-text="analytics.byCountry?.length ?? 0"></div>
+      </div>
+      <div class="card">
+        <div class="small">Referrers</div>
+        <div class="value" x-text="analytics.byReferer?.length ?? 0"></div>
+      </div>
     </div>
 
-    <div class="card">
-      <h3 class="section-title">By country</h3>
-      <ol class="bucket-list">
-        <template x-for="b in analytics.byCountry || []" :key="b.label">
-          <li><span x-text="b.label"></span>: <strong x-text="b.total"></strong></li>
-        </template>
-      </ol>
-    </div>
+    <div class="grid">
+      <div class="card">
+        <h3 class="section-title">Clicks by day</h3>
+        <div class="chart-list" x-show="(analytics.byDay || []).length > 0">
+          <template x-for="b in analytics.byDay || []" :key="b.label">
+            <div class="chart-row">
+              <div class="chart-label" x-text="b.label"></div>
+              <div class="bar-track"><div class="bar-fill" :style="`width: ${barWidth(b.total, analytics.byDay)}%`"></div></div>
+              <div class="chart-value" x-text="b.total"></div>
+            </div>
+          </template>
+        </div>
+        <div class="small" x-show="(analytics.byDay || []).length === 0">No data yet.</div>
+      </div>
 
-    <div class="card">
-      <h3 class="section-title">By device</h3>
-      <ol class="bucket-list">
-        <template x-for="b in analytics.byDevice || []" :key="b.label">
-          <li><span x-text="b.label"></span>: <strong x-text="b.total"></strong></li>
-        </template>
-      </ol>
-    </div>
+      <div class="card">
+        <h3 class="section-title">By country</h3>
+        <div class="chart-list" x-show="(analytics.byCountry || []).length > 0">
+          <template x-for="b in analytics.byCountry || []" :key="b.label">
+            <div class="chart-row">
+              <div class="chart-label" x-text="b.label"></div>
+              <div class="bar-track"><div class="bar-fill" :style="`width: ${barWidth(b.total, analytics.byCountry)}%`"></div></div>
+              <div class="chart-value" x-text="b.total"></div>
+            </div>
+          </template>
+        </div>
+        <div class="small" x-show="(analytics.byCountry || []).length === 0">No data yet.</div>
+      </div>
 
-    <div class="card">
-      <h3 class="section-title">Top referrers</h3>
-      <ol class="bucket-list">
-        <template x-for="b in analytics.byReferer || []" :key="b.label">
-          <li><span x-text="b.label"></span>: <strong x-text="b.total"></strong></li>
-        </template>
-      </ol>
+      <div class="card">
+        <h3 class="section-title">By device</h3>
+        <div class="chart-list" x-show="(analytics.byDevice || []).length > 0">
+          <template x-for="b in analytics.byDevice || []" :key="b.label">
+            <div class="chart-row">
+              <div class="chart-label" x-text="b.label"></div>
+              <div class="bar-track"><div class="bar-fill" :style="`width: ${barWidth(b.total, analytics.byDevice)}%`"></div></div>
+              <div class="chart-value" x-text="b.total"></div>
+            </div>
+          </template>
+        </div>
+        <div class="small" x-show="(analytics.byDevice || []).length === 0">No data yet.</div>
+      </div>
+
+      <div class="card">
+        <h3 class="section-title">Top referrers</h3>
+        <div class="chart-list" x-show="(analytics.byReferer || []).length > 0">
+          <template x-for="b in analytics.byReferer || []" :key="b.label">
+            <div class="chart-row">
+              <div class="chart-label" x-text="b.label"></div>
+              <div class="bar-track"><div class="bar-fill" :style="`width: ${barWidth(b.total, analytics.byReferer)}%`"></div></div>
+              <div class="chart-value" x-text="b.total"></div>
+            </div>
+          </template>
+        </div>
+        <div class="small" x-show="(analytics.byReferer || []).length === 0">No data yet.</div>
+      </div>
     </div>
   </div>
 </div>
@@ -100,6 +130,8 @@
       selectedLink: null,
       search: '',
       showResults: false,
+      loadingLinks: true,
+      loadingAnalytics: true,
 
       get filteredLinks() {
         const q = this.search.toLowerCase().trim();
@@ -113,13 +145,18 @@
         const params = new URLSearchParams(window.location.search);
         const preselectedId = params.get('linkId');
 
-        const linksRes = await fetch('/api/links');
-        this.links = await linksRes.json();
+        try {
+          this.loadingLinks = true;
+          const linksRes = await fetch('/api/links');
+          this.links = await linksRes.json();
+        } finally {
+          this.loadingLinks = false;
+        }
 
         if (preselectedId) {
           const found = this.links.find(l => String(l.id) === String(preselectedId));
           if (found) {
-            this.selectLink(found, false);
+            await this.selectLink(found, false);
             return;
           }
         }
@@ -128,12 +165,17 @@
       },
 
       async fetchAnalytics() {
-        let url = '/api/analytics';
-        if (this.selectedLink) {
-          url += `?linkId=${this.selectedLink.id}`;
+        this.loadingAnalytics = true;
+        try {
+          let url = '/api/analytics';
+          if (this.selectedLink) {
+            url += `?linkId=${this.selectedLink.id}`;
+          }
+          const res = await fetch(url);
+          this.analytics = await res.json();
+        } finally {
+          this.loadingAnalytics = false;
         }
-        const res = await fetch(url);
-        this.analytics = await res.json();
       },
 
       async selectLink(link, closeResults = true) {
@@ -147,6 +189,13 @@
         this.selectedLink = null;
         this.search = '';
         await this.fetchAnalytics();
+      },
+
+      barWidth(value, series) {
+        if (!series || series.length === 0) return 0;
+        const max = Math.max(...series.map(x => x.total || 0));
+        if (max <= 0) return 0;
+        return Math.max(6, Math.round((value / max) * 100));
       }
     }
   }

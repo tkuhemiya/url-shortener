@@ -24,12 +24,25 @@
     <div class="success" x-text="success" x-show="success"></div>
   </div>
 
-  <div class="grid">
+  <div class="loading-wrap" x-show="loadingLinks">
+    <div class="spinner" aria-label="Loading links"></div>
+  </div>
+
+  <div class="empty-state" x-show="!loadingLinks && links.length === 0">
+    <div class="card">No links yet. Create your first short URL above.</div>
+  </div>
+
+  <div class="grid" x-show="!loadingLinks && links.length > 0">
     <template x-for="link in links" :key="link.id">
       <div class="card link-card" @click="openAnalytics(link)">
         <div class="short-row">
-          <div class="short-url" x-text="link.shortUrl"></div>
-          <button class="btn secondary" @click.stop="copy(link.shortUrl)">Copy</button>
+          <div class="short-wrap">
+            <div class="short-url" x-text="link.shortUrl"></div>
+            <div class="copy-hint" x-show="copiedLinkId === link.id">Copied</div>
+          </div>
+          <button class="btn secondary" @click.stop="copy(link)">
+            <span x-text="copiedLinkId === link.id ? 'Copied' : 'Copy'"></span>
+          </button>
         </div>
         <div class="original-url" x-text="link.originalUrl"></div>
         <div class="meta">
@@ -46,6 +59,8 @@
       links: [],
       formUrl: '',
       loadingCreate: false,
+      loadingLinks: true,
+      copiedLinkId: null,
       error: '',
       success: '',
 
@@ -54,8 +69,13 @@
       },
 
       async fetchLinks() {
-        const res = await fetch('/api/links');
-        this.links = await res.json();
+        try {
+          this.loadingLinks = true;
+          const res = await fetch('/api/links');
+          this.links = await res.json();
+        } finally {
+          this.loadingLinks = false;
+        }
       },
 
       async createUrl() {
@@ -85,10 +105,12 @@
         }
       },
 
-      async copy(value) {
-        await navigator.clipboard.writeText(value);
-        this.success = 'Copied to clipboard.';
-        setTimeout(() => this.success = '', 1200);
+      async copy(link) {
+        await navigator.clipboard.writeText(link.shortUrl);
+        this.copiedLinkId = link.id;
+        setTimeout(() => {
+          if (this.copiedLinkId === link.id) this.copiedLinkId = null;
+        }, 1200);
       },
 
       openAnalytics(link) {
