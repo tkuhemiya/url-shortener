@@ -16,10 +16,14 @@ import java.time.OffsetDateTime;
 public class ClickTrackingService {
     private final ClickEventRepository clickEventRepository;
     private final LinkRepository linkRepository;
+    private final GeoIpService geoIpService;
 
-    public ClickTrackingService(ClickEventRepository clickEventRepository, LinkRepository linkRepository) {
+    public ClickTrackingService(ClickEventRepository clickEventRepository,
+                                LinkRepository linkRepository,
+                                GeoIpService geoIpService) {
         this.clickEventRepository = clickEventRepository;
         this.linkRepository = linkRepository;
+        this.geoIpService = geoIpService;
     }
 
     @Async
@@ -33,10 +37,11 @@ public class ClickTrackingService {
         ClickEvent event = new ClickEvent();
         event.setLink(link);
         event.setClickedAt(OffsetDateTime.now());
-        event.setIpAddress(RequestUtils.extractClientIp(request));
+        String ipAddress = RequestUtils.extractClientIp(request);
+        event.setIpAddress(ipAddress);
         event.setUserAgent(request.getHeader("User-Agent"));
         event.setReferer(request.getHeader("Referer"));
-        event.setCountry("unknown");
+        event.setCountry(geoIpService.resolveCountry(ipAddress));
         event.setDeviceType(extractDeviceType(request.getHeader("User-Agent")));
         event.setBrowser(extractBrowser(request.getHeader("User-Agent")));
         event.setOs(extractOs(request.getHeader("User-Agent")));

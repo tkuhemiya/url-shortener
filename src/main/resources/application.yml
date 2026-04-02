@@ -24,3 +24,5 @@ app:
   rate-limit:
     create-per-minute: ${RATE_LIMIT_CREATE_PER_MINUTE:10}
     redirect-per-minute: ${RATE_LIMIT_REDIRECT_PER_MINUTE:600}
+  geo-ip:
+    lookup-url: ${GEO_IP_LOOKUP_URL:https://ipapi.co/%s/json/}
