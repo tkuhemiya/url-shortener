@@ -21,6 +21,15 @@ public interface ClickEventRepository extends JpaRepository<ClickEvent, Long> {
     List<LabelCountProjection> countByCountry(@Param("linkId") Long linkId);
 
     @Query("""
+            select c.country as label, count(c.id) as total
+            from ClickEvent c
+            where c.country is not null
+            group by c.country
+            order by count(c.id) desc
+            """)
+    List<LabelCountProjection> countByCountryAll();
+
+    @Query("""
             select c.deviceType as label, count(c.id) as total
             from ClickEvent c
             where c.link.id = :linkId and c.deviceType is not null
@@ -28,6 +37,15 @@ public interface ClickEventRepository extends JpaRepository<ClickEvent, Long> {
             order by count(c.id) desc
             """)
     List<LabelCountProjection> countByDeviceType(@Param("linkId") Long linkId);
+
+    @Query("""
+            select c.deviceType as label, count(c.id) as total
+            from ClickEvent c
+            where c.deviceType is not null
+            group by c.deviceType
+            order by count(c.id) desc
+            """)
+    List<LabelCountProjection> countByDeviceTypeAll();
 
     @Query("""
             select c.referer as label, count(c.id) as total
@@ -38,6 +56,15 @@ public interface ClickEventRepository extends JpaRepository<ClickEvent, Long> {
             """)
     List<LabelCountProjection> countByReferer(@Param("linkId") Long linkId);
 
+    @Query("""
+            select c.referer as label, count(c.id) as total
+            from ClickEvent c
+            where c.referer is not null
+            group by c.referer
+            order by count(c.id) desc
+            """)
+    List<LabelCountProjection> countByRefererAll();
+
     @Query(value = """
             select to_char(date(clicked_at), 'YYYY-MM-DD') as label, count(*) as total
             from click_events
@@ -46,6 +73,14 @@ public interface ClickEventRepository extends JpaRepository<ClickEvent, Long> {
             order by date(clicked_at)
             """, nativeQuery = true)
     List<LabelCountProjection> countByDay(@Param("linkId") Long linkId);
+
+    @Query(value = """
+            select to_char(date(clicked_at), 'YYYY-MM-DD') as label, count(*) as total
+            from click_events
+            group by date(clicked_at)
+            order by date(clicked_at)
+            """, nativeQuery = true)
+    List<LabelCountProjection> countByDayAll();
 
     interface LabelCountProjection {
         String getLabel();
