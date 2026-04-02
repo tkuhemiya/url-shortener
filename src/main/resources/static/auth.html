@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Account</title>
+  <link rel="stylesheet" href="/app.css" />
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</head>
+<body>
+<div class="container narrow" x-data="authPage()" x-init="init()">
+  <div class="header">
+    <h1>Account</h1>
+    <a class="btn secondary" href="/">Back to URLs</a>
+  </div>
+
+  <div class="card" x-show="me.authenticated">
+    <h3 class="section-title">You are signed in</h3>
+    <div class="small">Signed in as <strong x-text="me.email"></strong></div>
+    <div class="auth-actions" style="margin-top: 10px;">
+      <button class="btn secondary" @click="logout()">Log out</button>
+    </div>
+  </div>
+
+  <div class="card" x-show="!me.authenticated">
+    <div class="auth-tabs">
+      <button class="btn" :class="mode === 'signup' ? '' : 'secondary'" @click="mode='signup'">Sign up</button>
+      <button class="btn" :class="mode === 'login' ? '' : 'secondary'" @click="mode='login'">Log in</button>
+    </div>
+
+    <p class="small" x-show="mode === 'signup'">Create an account and your existing guest links will transfer automatically.</p>
+    <p class="small" x-show="mode === 'login'">Log in to continue managing your links.</p>
+
+    <div class="form-col">
+      <input class="input" type="email" placeholder="you@example.com" x-model="form.email" />
+      <div class="field-error" x-show="fieldErrors.email" x-text="fieldErrors.email"></div>
+
+      <input class="input" type="password" placeholder="At least 8 characters" x-model="form.password" />
+      <div class="field-error" x-show="fieldErrors.password" x-text="fieldErrors.password"></div>
+
+      <button class="btn" @click="submit()" :disabled="loading" x-text="loading ? 'Please wait...' : (mode === 'signup' ? 'Create account' : 'Log in')"></button>
+    </div>
+
+    <div class="error" x-show="error" x-text="error"></div>
+  </div>
+</div>
+
+<script>
+  function authPage() {
+    return {
+      mode: 'signup',
+      loading: false,
+      error: '',
+      fieldErrors: {},
+      form: { email: '', password: '' },
+      me: { authenticated: false, email: null },
+
+      async init() {
+        await this.fetchMe();
+      },
+
+      async fetchMe() {
+        const res = await fetch('/api/auth/me');
+        this.me = await res.json();
+      },
+
+      async submit() {
+        this.error = '';
+        this.fieldErrors = {};
+        this.loading = true;
+
+        const endpoint = this.mode === 'signup' ? '/api/auth/signup' : '/api/auth/login';
+        try {
+          const res = await fetch(endpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(this.form)
+          });
+
+          const payload = await res.json();
+          if (!res.ok) {
+            this.fieldErrors = this.extractFieldErrors(payload.validationErrors);
+            throw new Error(payload.message || 'Authentication failed');
+          }
+
+          window.location.href = '/';
+        } catch (e) {
+          this.error = e.message;
+        } finally {
+          this.loading = false;
+        }
+      },
+
+      async logout() {
+        await fetch('/api/auth/logout', { method: 'POST' });
+        this.me = { authenticated: false, email: null };
+        this.mode = 'login';
+      },
+
+      extractFieldErrors(validationErrors) {
+        if (!validationErrors) return {};
+        const flattened = {};
+        for (const key of Object.keys(validationErrors)) {
+          const messages = validationErrors[key];
+          if (Array.isArray(messages) && messages.length > 0) {
+            flattened[key] = messages[0];
+          }
+        }
+        return flattened;
+      }
+    }
+  }
+</script>
+</body>
+</html>

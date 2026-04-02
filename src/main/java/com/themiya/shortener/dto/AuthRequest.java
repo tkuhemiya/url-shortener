@@ -5,11 +5,11 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
 public class AuthRequest {
-    @Email
-    @NotBlank
+    @Email(message = "email must be valid")
+    @NotBlank(message = "email is required")
     private String email;
 
-    @NotBlank
+    @NotBlank(message = "password is required")
     @Size(min = 8, message = "password must be at least 8 characters")
     private String password;
 

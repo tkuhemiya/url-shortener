@@ -179,3 +179,22 @@ body {
   text-align: right;
   color: #1f2937;
 }
+
+.narrow {
+  max-width: 620px;
+}
+.auth-tabs,
+.auth-actions {
+  display: flex;
+  gap: 8px;
+}
+.form-col {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.field-error {
+  margin-top: -4px;
+  color: #b91c1c;
+  font-size: 12px;
+}

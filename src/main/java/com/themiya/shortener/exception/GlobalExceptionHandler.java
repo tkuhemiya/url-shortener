@@ -8,6 +8,8 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.time.OffsetDateTime;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -31,11 +33,19 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<Map<String, Object>> handleValidation(MethodArgumentNotValidException ex) {
-        String message = ex.getBindingResult().getFieldErrors().stream()
+        Map<String, List<String>> fieldErrors = ex.getBindingResult().getFieldErrors().stream()
                 .collect(Collectors.groupingBy(FieldError::getField,
-                        Collectors.mapping(FieldError::getDefaultMessage, Collectors.toList())))
-                .toString();
-        return build(HttpStatus.BAD_REQUEST, message);
+                        LinkedHashMap::new,
+                        Collectors.mapping(FieldError::getDefaultMessage, Collectors.toList())));
+
+        String message = "Validation failed";
+        if (!fieldErrors.isEmpty()) {
+            Map.Entry<String, List<String>> first = fieldErrors.entrySet().iterator().next();
+            String firstMessage = first.getValue().isEmpty() ? "invalid value" : first.getValue().getFirst();
+            message = "Validation failed for " + first.getKey() + ": " + firstMessage;
+        }
+
+        return build(HttpStatus.BAD_REQUEST, message, Map.of("validationErrors", fieldErrors));
     }
 
     @ExceptionHandler(Exception.class)
@@ -44,11 +54,16 @@ public class GlobalExceptionHandler {
     }
 
     private ResponseEntity<Map<String, Object>> build(HttpStatus status, String message) {
-        return ResponseEntity.status(status).body(Map.of(
-                "timestamp", OffsetDateTime.now().toString(),
-                "status", status.value(),
-                "error", status.getReasonPhrase(),
-                "message", message
-        ));
+        return build(status, message, Map.of());
+    }
+
+    private ResponseEntity<Map<String, Object>> build(HttpStatus status, String message, Map<String, Object> extras) {
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("timestamp", OffsetDateTime.now().toString());
+        payload.put("status", status.value());
+        payload.put("error", status.getReasonPhrase());
+        payload.put("message", message);
+        payload.putAll(extras);
+        return ResponseEntity.status(status).body(payload);
     }
 }
