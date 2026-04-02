@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" class="dark">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -10,18 +10,21 @@
 <body>
 <div class="container" x-data="urlsPage()" x-init="init()">
   <div class="header">
-    <h1>Your URLs</h1>
-    <div style="display:flex; gap:8px;">
+    <div>
+      <h1>Your URLs</h1>
+      <p class="small">Create, copy, and inspect links from a clean, fast dashboard.</p>
+    </div>
+    <div class="header-actions">
       <a class="btn secondary" href="/analytics.html">Open Analytics</a>
       <a class="btn secondary" href="/auth.html" x-show="!me.authenticated">Sign in</a>
     </div>
   </div>
 
-  <div class="card" style="margin-bottom: 14px;">
+  <div class="card mb-14">
     <h3 class="section-title">Account</h3>
     <div x-show="me.authenticated" class="small">
       Signed in as <strong x-text="me.email"></strong>
-      <button class="btn secondary" style="margin-left: 8px;" @click="logout()">Log out</button>
+      <button class="btn secondary ml-8" @click="logout()">Log out</button>
     </div>
 
     <div x-show="!me.authenticated" class="small">

@@ -1,16 +1,20 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" class="dark">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Analytics</title>
   <link rel="stylesheet" href="/app.css" />
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 </head>
 <body>
 <div class="container" x-data="analyticsPage()" x-init="init()">
   <div class="header">
-    <h1>Analytics</h1>
+    <div>
+      <h1>Analytics</h1>
+      <p class="small">Track total clicks, countries, referrers, and click activity over time.</p>
+    </div>
     <a class="btn secondary" href="/">Back to URLs</a>
   </div>
 
@@ -18,22 +22,39 @@
     <h3 class="section-title">Scope</h3>
     <div class="form-row">
       <button class="btn secondary" @click="clearSelection()">All URLs</button>
-      <div class="search-wrap" style="flex:1">
+      <div class="search-wrap">
         <input class="input" type="text" placeholder="Search URL and select one..." x-model="search" @focus="showResults = true" @input="showResults = true" />
         <div class="search-results" x-show="showResults && filteredLinks.length > 0" @click.outside="showResults = false">
           <template x-for="link in filteredLinks" :key="link.id">
             <div class="search-item" @click="selectLink(link)">
-              <div x-text="link.shortUrl"></div>
+              <div class="summary-url" x-text="link.shortUrl"></div>
               <div class="small" x-text="link.originalUrl"></div>
             </div>
           </template>
         </div>
       </div>
     </div>
-    <div class="small" style="margin-top:8px;" x-show="selectedLink">
-      Viewing selected URL: <strong x-text="selectedLink.shortUrl"></strong>
+
+    <div class="scope-summary" x-show="selectedLink">
+      <div class="scope-row">
+        <div class="scope-copy-block">
+          <div class="small">Shortened URL</div>
+          <div class="summary-url" x-text="selectedLink?.shortUrl"></div>
+        </div>
+        <button class="btn secondary" @click="copyShortUrl(selectedLink?.shortUrl)">Copy</button>
+      </div>
+
+      <div class="scope-row scope-row-stack">
+        <div class="scope-copy-block">
+          <div class="small">Original URL</div>
+          <div class="summary-original" x-text="selectedLink?.originalUrl"></div>
+        </div>
+      </div>
+
+      <div class="copy-status" x-show="copyMessage" x-text="copyMessage"></div>
     </div>
-    <div class="small" style="margin-top:8px;" x-show="!selectedLink">
+
+    <div class="small mt-8" x-show="!selectedLink">
       Viewing analytics across all URLs.
     </div>
   </div>
@@ -48,75 +69,56 @@
 
   <div x-show="!loadingAnalytics && !loadingLinks && links.length > 0">
     <div class="analytics-grid">
-      <div class="card">
+      <div class="card metric-card">
         <div class="small">Total Clicks</div>
         <div class="value" x-text="analytics.totalClicks ?? 0"></div>
       </div>
-      <div class="card">
-        <div class="small">Unique Countries</div>
-        <div class="value" x-text="analytics.byCountry?.length ?? 0"></div>
-      </div>
-      <div class="card">
-        <div class="small">Referrers</div>
-        <div class="value" x-text="analytics.byReferer?.length ?? 0"></div>
-      </div>
-    </div>
 
-    <div class="grid">
-      <div class="card">
-        <h3 class="section-title">Clicks by day</h3>
-        <div class="chart-list" x-show="(analytics.byDay || []).length > 0">
-          <template x-for="b in analytics.byDay || []" :key="b.label">
-            <div class="chart-row">
-              <div class="chart-label" x-text="b.label"></div>
-              <div class="bar-track"><div class="bar-fill" :style="`width: ${barWidth(b.total, analytics.byDay)}%`"></div></div>
-              <div class="chart-value" x-text="b.total"></div>
+      <div class="card metric-card">
+        <div class="metric-head">
+          <h3 class="section-title">Countries</h3>
+          <span class="count-badge" x-text="(analytics.byCountry || []).length"></span>
+        </div>
+        <div class="small">Unique countries</div>
+        <div class="detail-list">
+          <template x-for="item in analytics.byCountry || []" :key="`country-${item.label}`">
+            <div class="detail-item">
+              <span class="detail-label" x-text="item.label"></span>
+              <span class="detail-count" x-text="item.total"></span>
             </div>
           </template>
+          <div class="small" x-show="(analytics.byCountry || []).length === 0">No country data yet.</div>
         </div>
+      </div>
+
+      <div class="card metric-card">
+        <div class="metric-head">
+          <h3 class="section-title">Referrers</h3>
+          <span class="count-badge" x-text="(analytics.byReferer || []).length"></span>
+        </div>
+        <div class="small">Unique referrers</div>
+        <div class="detail-list">
+          <template x-for="item in analytics.byReferer || []" :key="`ref-${item.label}`">
+            <div class="detail-item">
+              <span class="detail-label" x-text="item.label"></span>
+              <span class="detail-count" x-text="item.total"></span>
+            </div>
+          </template>
+          <div class="small" x-show="(analytics.byReferer || []).length === 0">No referrer data yet.</div>
+        </div>
+      </div>
+      <div class="card chart-card">
+        <div class="metric-head">
+          <h3 class="section-title">Clicks over time</h3>
+          <span class="count-badge" x-text="(analytics.byDay || []).length"></span>
+        </div>
+        <div class="small">Daily clicks shown as a simple time series.</div>
+
+        <div class="time-series" x-show="(analytics.byDay || []).length > 0">
+          <canvas x-ref="timeSeriesCanvas" class="time-series-canvas" aria-label="Clicks over time chart"></canvas>
+        </div>
+
         <div class="small" x-show="(analytics.byDay || []).length === 0">No data yet.</div>
-      </div>
-
-      <div class="card">
-        <h3 class="section-title">By country</h3>
-        <div class="chart-list" x-show="(analytics.byCountry || []).length > 0">
-          <template x-for="b in analytics.byCountry || []" :key="b.label">
-            <div class="chart-row">
-              <div class="chart-label" x-text="b.label"></div>
-              <div class="bar-track"><div class="bar-fill" :style="`width: ${barWidth(b.total, analytics.byCountry)}%`"></div></div>
-              <div class="chart-value" x-text="b.total"></div>
-            </div>
-          </template>
-        </div>
-        <div class="small" x-show="(analytics.byCountry || []).length === 0">No data yet.</div>
-      </div>
-
-      <div class="card">
-        <h3 class="section-title">By device</h3>
-        <div class="chart-list" x-show="(analytics.byDevice || []).length > 0">
-          <template x-for="b in analytics.byDevice || []" :key="b.label">
-            <div class="chart-row">
-              <div class="chart-label" x-text="b.label"></div>
-              <div class="bar-track"><div class="bar-fill" :style="`width: ${barWidth(b.total, analytics.byDevice)}%`"></div></div>
-              <div class="chart-value" x-text="b.total"></div>
-            </div>
-          </template>
-        </div>
-        <div class="small" x-show="(analytics.byDevice || []).length === 0">No data yet.</div>
-      </div>
-
-      <div class="card">
-        <h3 class="section-title">Top referrers</h3>
-        <div class="chart-list" x-show="(analytics.byReferer || []).length > 0">
-          <template x-for="b in analytics.byReferer || []" :key="b.label">
-            <div class="chart-row">
-              <div class="chart-label" x-text="b.label"></div>
-              <div class="bar-track"><div class="bar-fill" :style="`width: ${barWidth(b.total, analytics.byReferer)}%`"></div></div>
-              <div class="chart-value" x-text="b.total"></div>
-            </div>
-          </template>
-        </div>
-        <div class="small" x-show="(analytics.byReferer || []).length === 0">No data yet.</div>
       </div>
     </div>
   </div>
@@ -132,6 +134,8 @@
       showResults: false,
       loadingLinks: true,
       loadingAnalytics: true,
+      copyMessage: '',
+      chartInstance: null,
 
       get filteredLinks() {
         const q = this.search.toLowerCase().trim();
@@ -173,6 +177,7 @@
           }
           const res = await fetch(url);
           this.analytics = await res.json();
+          this.$nextTick(() => this.renderTimeSeries());
         } finally {
           this.loadingAnalytics = false;
         }
@@ -181,6 +186,7 @@
       async selectLink(link, closeResults = true) {
         this.selectedLink = link;
         this.search = link.shortUrl;
+        this.copyMessage = '';
         if (closeResults) this.showResults = false;
         await this.fetchAnalytics();
       },
@@ -188,14 +194,74 @@
       async clearSelection() {
         this.selectedLink = null;
         this.search = '';
+        this.copyMessage = '';
         await this.fetchAnalytics();
       },
 
-      barWidth(value, series) {
-        if (!series || series.length === 0) return 0;
-        const max = Math.max(...series.map(x => x.total || 0));
-        if (max <= 0) return 0;
-        return Math.max(6, Math.round((value / max) * 100));
+      async copyShortUrl(value) {
+        if (!value) return;
+        await navigator.clipboard.writeText(value);
+        this.copyMessage = 'Copied shortened URL';
+        setTimeout(() => {
+          if (this.copyMessage === 'Copied shortened URL') {
+            this.copyMessage = '';
+          }
+        }, 1200);
+      },
+
+      renderTimeSeries() {
+        const series = this.analytics.byDay || [];
+
+        if (this.chartInstance) {
+          this.chartInstance.destroy();
+          this.chartInstance = null;
+        }
+
+        if (!series.length || !this.$refs.timeSeriesCanvas || typeof Chart === 'undefined') {
+          return;
+        }
+
+        const labels = series.map(item => item.label);
+        const values = series.map(item => item.total || 0);
+
+        this.chartInstance = new Chart(this.$refs.timeSeriesCanvas, {
+          type: 'line',
+          data: {
+            labels,
+            datasets: [{
+              label: 'Clicks',
+              data: values,
+              borderColor: 'rgb(245, 210, 132)',
+              backgroundColor: 'rgba(245, 210, 132, 0.2)',
+              borderWidth: 3,
+              pointRadius: 4,
+              pointHoverRadius: 5,
+              tension: 0.25,
+              fill: false
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false }
+            },
+            scales: {
+              x: {
+                grid: { color: 'rgba(255,255,255,0.08)' },
+                ticks: { color: 'rgba(255,255,255,0.75)' }
+              },
+              y: {
+                beginAtZero: true,
+                ticks: {
+                  precision: 0,
+                  color: 'rgba(255,255,255,0.75)'
+                },
+                grid: { color: 'rgba(255,255,255,0.08)' }
+              }
+            }
+          }
+        });
       }
     }
   }

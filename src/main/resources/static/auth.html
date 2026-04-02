@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" class="dark">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -10,14 +10,17 @@
 <body>
 <div class="container narrow" x-data="authPage()" x-init="init()">
   <div class="header">
-    <h1>Account</h1>
+    <div>
+      <h1>Account</h1>
+      <p class="small">Sign in to sync your links and keep your analytics in one place.</p>
+    </div>
     <a class="btn secondary" href="/">Back to URLs</a>
   </div>
 
   <div class="card" x-show="me.authenticated">
     <h3 class="section-title">You are signed in</h3>
     <div class="small">Signed in as <strong x-text="me.email"></strong></div>
-    <div class="auth-actions" style="margin-top: 10px;">
+    <div class="auth-actions mt-10">
       <button class="btn secondary" @click="logout()">Log out</button>
     </div>
   </div>

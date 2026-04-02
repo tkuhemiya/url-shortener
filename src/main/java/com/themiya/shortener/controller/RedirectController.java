@@ -29,7 +29,7 @@ public class RedirectController {
         this.rateLimitService = rateLimitService;
     }
 
-    @GetMapping("/{slug}")
+    @GetMapping("/{slug:[a-zA-Z0-9]{7}}")
     public ResponseEntity<Void> redirect(@PathVariable String slug, HttpServletRequest request) {
         String ip = RequestUtils.extractClientIp(request);
         if (!rateLimitService.allowRedirect(ip)) {
