@@ -37,7 +37,7 @@ Prerequisites
 
 1) Clone the repository
 ```sh
-   git clone <this-repo-url>
+   git clone [<this-repo-url>](https://github.com/tkuhemiya/url-shortener.git)
    cd url-shortener
 ```
 
